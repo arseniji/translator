@@ -1,4 +1,4 @@
-package dot.trans.rpn_converter;
+package dot.trans.rpn;
 
 import java.util.HashMap;
 
@@ -12,9 +12,10 @@ public class PriorityTable {
         put("R5",1); // )
         put("R2",1); // ,
         put("R9",1); // ]
+        put("O7",2); // ==
         put("O14",2); // ||
         put("O13",3); // &&
-        put("O15",4); // !
+        put("O15",100); // !
         put("O9",5); // <
         put("O10",5); // >
         put("O1",6); // +
