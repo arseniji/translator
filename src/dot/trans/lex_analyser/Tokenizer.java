@@ -76,7 +76,7 @@ public class Tokenizer {
 
         // Ключевые слова и идентификаторы
         TOKEN_PATTERNS.add(new TokenMatcher("W",
-                "\\b(sqrt|if|main|int|float|double|char|bool|void|long|short|signed|unsigned|main" +
+                "\\b(sqrt|if|int|float|double|char|bool|void|long|short|signed|unsigned|" +
                         "if|else|for|while|do|switch|case|default|break|continue|return|" +
                         "const|true|false|nullptr|cin|cout|endl|class|struct|template|" +
                         "public|private|protected|this|namespace|using|auto|static|extern)\\b",
