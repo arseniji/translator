@@ -1,11 +1,17 @@
 package dot.trans.lex_analyser;
 
+import java.util.Objects;
+import java.util.Set;
+
+import static java.lang.System.in;
+
 public class Token{
-    public String type;
-    public Integer count;
-    public String value;
-    public Integer col;
-    public Integer row;
+    private String type;
+    private Integer count;
+    private String value;
+    private Integer col;
+    private Integer row;
+
 
     public Token(String type, Integer count, String value, Integer row, Integer col){
         this.type = type;
@@ -14,8 +20,16 @@ public class Token{
         this.col = col;
         this.row = row;
     }
+    public Token(String type, Integer count){
+        this.type = type;
+        this.count = count;
+    }
+
     public void showAll(){
         System.out.println(String.format("Token(%s%d, '%s', line = %d, col = %d)", type, count, value, row, col));
+    }
+    public String getTypeCount(){
+        return String.format("%s%d",type,count);
     }
     public String getType() {
         return type;
@@ -35,6 +49,24 @@ public class Token{
 
     public Integer getRow() {
         return row;
+    }
+
+    public boolean isOperator(){
+        return (Objects.equals(type,"O") || Objects.equals(type, "U"));
+    }
+
+    public boolean isVar(){
+        return Objects.equals(type,"V");
+    }
+
+    public boolean isRightAssociative(){
+        return Objects.equals(getTypeCount(), "O6") || Objects.equals(getTypeCount(), "U2");
+    }
+
+    public boolean isType(){
+        if (Objects.equals(type, "W"))
+            return Set.of(1, 2, 3, 4, 5, 6, 18, 21, 22, 23, 24).contains(count);
+        return false;
     }
 
     @Override
