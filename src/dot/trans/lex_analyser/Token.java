@@ -69,6 +69,17 @@ public class Token{
         return false;
     }
 
+    public boolean match(String typeCount){
+        return getTypeCount().equals(typeCount);
+    }
+
+    public boolean matchCount(Integer count){
+        return getCount().equals(count);
+    }
+    public boolean matchType(String type) {
+        return getType().equals(type);
+    }
+
     @Override
     public String toString(){
         return String.format("%s%d", type,count);
