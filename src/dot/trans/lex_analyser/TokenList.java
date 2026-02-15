@@ -26,8 +26,7 @@ public class TokenList  {
                 if (Objects.equals(count,2))
                     if (TokenList.isEmpty())
                         type = "U";
-                    else if (Objects.equals(TokenList.getLast().getType(), "O") ||
-                        Objects.equals(TokenList.getLast().getType(), "R")) type = "U";
+                    else if (Objects.equals(TokenList.getLast().getType(), "O")) type = "U";
                 break;
             case "W":
                 count = Integer.parseInt((Lexems.KEYWORDS.get(value).substring(1)));
@@ -67,6 +66,43 @@ public class TokenList  {
         Token token = new Token(type,count,value,row,col);
         TokenList.add(token);
     }
+    public void addToken(Token token){
+        TokenList.add(token);
+    }
+
+    public void addList(TokenList tokenList){
+        for (int i = 0; i< tokenList.size(); i ++){
+            TokenList.add(tokenList.getToken(i));
+        }
+    }
+
+    public int size(){
+        return TokenList.size();
+    }
+
+    public Token getToken(int i){return TokenList.get(i);}
+    public void setToken(int i, Token token){TokenList.set(i,token);}
+
+    public boolean prevIsFunction(){
+        return TokenList.getLast().isVar();
+    }
+
+    public Token popFirst(){
+        return TokenList.removeFirst();
+    }
+
+    public Token peekFirst(){
+        return TokenList.getFirst();
+    }
+
+    public Token peekLast(){
+        return TokenList.getLast();
+    }
+
+    public void clear(){
+        TokenList.clear();
+    }
+
     public void show(){
         for (Token token:TokenList) token.showAll();
     }
