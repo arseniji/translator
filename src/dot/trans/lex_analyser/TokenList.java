@@ -80,6 +80,10 @@ public class TokenList  {
         return TokenList.size();
     }
 
+    public boolean isEmpty(){
+        return TokenList.isEmpty();
+    }
+
     public Token getToken(int i){return TokenList.get(i);}
     public void setToken(int i, Token token){TokenList.set(i,token);}
 
