@@ -59,8 +59,19 @@ public class Token{
         return Objects.equals(type,"V");
     }
 
+    public boolean isBool(){ return Objects.equals(getTypeCount(),"W19") || Objects.equals(getTypeCount(),"W20");}
+
     public boolean isRightAssociative(){
-        return Objects.equals(getTypeCount(), "O6") || Objects.equals(getTypeCount(), "U2");
+        return getTypeCount().equals("O6") ||   // =
+                getTypeCount().equals("O18") ||  // +=
+                getTypeCount().equals("O19") ||  // -=
+                getTypeCount().equals("O20") ||  // *=
+                getTypeCount().equals("O21") ||  // /=
+                getTypeCount().equals("O22") ||  // %=
+                getTypeCount().equals("U2") ||   // унарный -
+                getTypeCount().equals("O15") ||  // !
+                getTypeCount().equals("O16") ||  // ++
+                getTypeCount().equals("O17");    // --
     }
 
     public boolean isType(){
