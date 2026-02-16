@@ -31,6 +31,9 @@ public class RPN {
             case "H":
                 exitString.addToken(token);
                 break;
+            case "W":
+                if (token.isBool()) exitString.addToken(token);
+                break;
             case "U":
             case "O":
                 processOperator(token);
