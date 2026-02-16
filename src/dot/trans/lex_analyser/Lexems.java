@@ -61,7 +61,7 @@ public class Lexems {
         put("cin", "W26");
         put("cout", "W27");
         put("endl", "W28");
-        put("sqrt", "W29");
+        put("sqrt","W29");
     }};
     public static final HashMap<String,String> SEPARATORS = new HashMap<>(){{
         put(";", "R1");
