@@ -1,99 +1,41 @@
 package dot.trans.lex_analyser;
 
-import java.util.Objects;
+import dot.trans.lex_analyser.lexem.TokenType;
+
 import java.util.Set;
 
-import static java.lang.System.in;
+public class Token {
+    private final TokenType type;
+    private final int index;
+    private final String value;
 
-public class Token{
-    private String type;
-    private Integer count;
-    private String value;
-    private Integer col;
-    private Integer row;
-
-
-    public Token(String type, Integer count, String value, Integer row, Integer col){
-        this.type = type;
-        this.count = count;
+    public Token(TokenType type, String value) {
+        this.type  = type;
         this.value = value;
-        this.col = col;
-        this.row = row;
+        this.index = -1;
     }
-    public Token(String type, Integer count){
-        this.type = type;
-        this.count = count;
+    public Token(TokenType type, int index, String value) {
+        this.type  = type;
+        this.index = index;
+        this.value = value;
     }
-
-    public void showAll(){
-        System.out.println(String.format("Token(%s%d, '%s', line = %d, col = %d)", type, count, value, row, col));
+    public String getCode() {
+        if (index < 0) return type.getCode();
+        return type.getCode() + index;
     }
-    public String getTypeCount(){
-        return String.format("%s%d",type,count);
-    }
-    public String getType() {
-        return type;
-    }
-
-    public Integer getCount() {
-        return count;
+    public boolean isType() {
+        return Set.of(TokenType.INT, TokenType.FLOAT, TokenType.DOUBLE,
+                        TokenType.CHAR, TokenType.BOOL,  TokenType.VOID,
+                        TokenType.LONG, TokenType.SHORT)
+                .contains(type);
     }
 
-    public String getValue() {
-        return value;
-    }
-
-    public Integer getCol() {
-        return col;
-    }
-
-    public Integer getRow() {
-        return row;
-    }
-
-    public boolean isOperator(){
-        return (Objects.equals(type,"O") || Objects.equals(type, "U"));
-    }
-
-    public boolean isVar(){
-        return Objects.equals(type,"V");
-    }
-
-    public boolean isBool(){ return Objects.equals(getTypeCount(),"W19") || Objects.equals(getTypeCount(),"W20");}
-
-    public boolean isRightAssociative(){
-        return getTypeCount().equals("O6") ||   // =
-                getTypeCount().equals("O18") ||  // +=
-                getTypeCount().equals("O19") ||  // -=
-                getTypeCount().equals("O20") ||  // *=
-                getTypeCount().equals("O21") ||  // /=
-                getTypeCount().equals("O22") ||  // %=
-                getTypeCount().equals("U2") ||   // унарный -
-                getTypeCount().equals("O15") ||  // !
-                getTypeCount().equals("O16") ||  // ++
-                getTypeCount().equals("O17");    // --
-    }
-
-    public boolean isType(){
-        if (Objects.equals(type, "W"))
-            return Set.of(1, 2, 3, 4, 5, 6, 18, 21, 22, 23, 24).contains(count);
-        return false;
-    }
-
-    public boolean match(String typeCount){
-        return getTypeCount().equals(typeCount);
-    }
-
-    public boolean matchCount(Integer count){
-        return getCount().equals(count);
-    }
-    public boolean matchType(String type) {
-        return getType().equals(type);
+    public boolean isOperator() {
+        return type.getCode().startsWith("O") || type == TokenType.UNARY_MINUS;
     }
 
     @Override
-    public String toString(){
-        return String.format("%s%d", type,count);
+    public String toString() {
+        return String.format("Token(%s, '%s')", getCode(), value);
     }
-
 }

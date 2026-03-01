@@ -18,6 +18,6 @@ public class Parser {
 
     public String parse() throws IOException {
         String content = new String(Files.readAllBytes(Paths.get(path)));
-        return content;
+        return content.replace("\r\n", "\n").replace("\r", "\n");
     }
 }
