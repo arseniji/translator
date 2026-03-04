@@ -1,10 +1,10 @@
 package dot.trans.rpn;
 
-import dot.trans.lex_analyser.Token;
-import dot.trans.lex_analyser.TokenList;
+import dot.trans.lexem.TokenType;
+import dot.trans.token_util.Token;
+import dot.trans.token_util.TokenList;
 
 import java.util.ArrayDeque;
-import java.util.Objects;
 
 public class SyntaxDefiner {
     private TokenList enterList;
@@ -12,6 +12,11 @@ public class SyntaxDefiner {
     private ArrayDeque<JumpLabel> labelStack = new ArrayDeque<>();
     private RPN rpn = new RPN();
     private int position = 0;
+    private int labelCounter = 0;
+
+    private Token newLabel() {
+        return new Token(TokenType.LABEL, ++labelCounter, "L" + labelCounter);
+    }
 
     private static class JumpLabel {
         Token token;
@@ -25,86 +30,75 @@ public class SyntaxDefiner {
         }
     }
 
-    public SyntaxDefiner(TokenList enterList){
+    public SyntaxDefiner(TokenList enterList) {
         this.enterList = enterList;
     }
 
-    public TokenList processList(){
-        while (hasMoreTokens() && !isEndToken(current())) {
-            System.out.println("Рассматриваем токен " + current());
+    public TokenList processList() {
+        while (hasMoreTokens() && current() != null) {
             processStatement();
-
-            while (!labelStack.isEmpty() && labelStack.peek().type.equals("IF")) {
-                Token next = current();
-                if (next != null && next.match("W8")) {
-                    break;
-                }
-                JumpLabel ifLabel = labelStack.pop();
-                exitList.addToken(new Token("LABEL", ifLabel.token.getCount()));
-            }
         }
-
-        while (!labelStack.isEmpty() && labelStack.peek().type.equals("IF")) {
-            JumpLabel label = labelStack.pop();
-            exitList.addToken(new Token("LABEL", label.token.getCount()));
-        }
-
-        if (!labelStack.isEmpty()) {
-            while (!labelStack.isEmpty()) {
-                JumpLabel label = labelStack.pop();
-            }
-        }
-
         return exitList;
     }
 
-    private boolean hasMoreTokens() {return position < enterList.size();}
-    private boolean isEndToken(Token token){return token == null || token.getType().equals("E");}
-
-    private Token current(){
-        if (!hasMoreTokens()) return null;
-        return enterList.getToken(position);
+    private boolean is(Token t, TokenType type) {
+        return t != null && t.getType() == type;
     }
 
-    private Token peek(int offset){
-        return enterList.getToken(position + offset);
+    private boolean cur(TokenType type) {
+        return is(current(), type);
     }
 
-    private Token currentNext(){
-        return enterList.getToken(position++);
+    private boolean isArrayAccess() {
+        return is(peek(1), TokenType.LBRACKET);
     }
 
+    private boolean isFuncCall() {
+        Token c = current();
+        Token n = peek(1);
+        if (c == null || n == null) return false;
+        return (c.getGroup().equals("V") || is(c, TokenType.SQRT))
+                && is(n, TokenType.LPAREN);
+    }
 
+    private boolean isVarDec() {
+        Token c = current();
+        if (c == null || !c.isType()) return false;
+        return peek(1) != null && peek(1).getGroup().equals("V");
+    }
 
-    private void processStatement(){
+    private boolean isFuncDec() {
+        Token c = current();
+        if (c == null || !c.isType()) return false;
+        if (peek(1) == null || !peek(1).getGroup().equals("V")) return false;
+        return is(peek(2), TokenType.LPAREN);
+    }
+
+    private void processStatement() {
         Token token = current();
         if (token == null) return;
 
-        switch (token.getType()){
-            case "W": // ключевое слово
-                if (token.isBool()) handleExpression();
+        switch (token.getGroup()) {
+            case "W":
+                if (token.isBool())   handleExpression();
                 else if (isFuncCall()) handleFuncCall();
-                else handleKeyword();
+                else                   handleKeyword();
                 break;
             case "V":
-                if (isArrayAccess()) handleArrayAccess();
+                if (isArrayAccess())  handleArrayAccess();
                 else if (isFuncCall()) handleFuncCall();
-                else handleExpression();
+                else                   handleExpression();
                 break;
             case "R":
-                if (token.matchCount(7)) {
-                    currentNext();
-                    return;
-                }
-                if (token.matchCount(1)) {
-                    currentNext();
+                if (is(token, TokenType.RBRACE) || is(token, TokenType.SEMICOLON)) {
+                    advance();
                     return;
                 }
                 handleExpression();
                 break;
             case "C":
             case "M":
-                currentNext();
+                advance();
                 break;
             default:
                 handleExpression();
@@ -112,540 +106,386 @@ public class SyntaxDefiner {
         }
     }
 
-    private boolean isArrayAccess(){
-        Token next = peek(1);
-        return next != null && next.match("R8");
-    }
-
-    private boolean isFuncCall(){
-        if (current() != null && current().matchType("V") && peek(1) != null && peek(1).match("R4")) {
-            return true;
-        }
-        return peek(1) != null && current().match("W29") && peek(1) != null && peek(1).match("R4");
-    }
-
-    private boolean isVarDec(){
-        if (current() == null || !current().isType()) return false;
-        return peek(1) != null && peek(1).matchType("V");
-    }
-
-    private boolean isFuncDec(){
-        if (current() == null || !current().isType()) return false;
-        if (peek(1) == null || !peek(1).matchType("V")) return false;
-        return peek(2) != null && peek(2).match("R4");
-    }
-
-    private void handleKeyword(){
+    private void handleKeyword() {
         Token keyword = current();
 
         if (keyword.isType()) {
-            if (isFuncDec()) handleFuncDec();
-            else if (isVarDec()) handleVarDec();
-            else currentNext();
+            if (isFuncDec())       handleFuncDec();
+            else if (isVarDec())   handleVarDec();
+            else                   advance();
             return;
         }
 
-        switch (keyword.getTypeCount()){
-            case "W7": // if
-                handleIf();
-                break;
-            case "W8": // else
-                handleElse();
-                break;
-            case "W9": // for
-                handleFor();
-                break;
-            case "W10": // while
-                handleWhile();
-                break;
-            case "W11": // do
-                handleDoWhile();
-                break;
-            case "W12": // return
-                handleReturn();
-                break;
-            case "W13": // break
-                handleBreak();
-                break;
-            case "W14": // continue
-                handleContinue();
-                break;
-            case "W15": // switch
-                handleSwitch();
-                break;
-            case "W26": // cin
-                handleCin();
-                break;
-            case "W27": // cout
-                handleCout();
-                break;
-            default:
-                currentNext();
-                break;
+        switch (keyword.getType()) {
+            case IF       -> handleIf();
+            case FOR      -> handleFor();
+            case WHILE    -> handleWhile();
+            case DO       -> handleDoWhile();
+            case RETURN   -> handleReturn();
+            case BREAK    -> handleBreak();
+            case CONTINUE -> handleContinue();
+            case CIN      -> handleCin();
+            case COUT     -> handleCout();
+            default       -> advance();
         }
     }
 
-    private void handleVarDec(){
-        Token type = currentNext();
+    private void handleVarDec() {
+        Token type = advance();
         exitList.addToken(type);
 
-        Token varName = currentNext();
+        Token varName = advance();
         exitList.addToken(varName);
 
-        if (current() != null && current().match("O6")) { // =
-            currentNext();
+        if (cur(TokenType.ASSIGN)) {
+            advance();
 
             if (isFuncCall()) {
                 handleFuncCall();
-                exitList.addToken(new Token("DECL_INIT", 1));
+                exitList.addToken(new Token(TokenType.DECL, "DECL_INIT"));
             } else {
-                TokenList value = extractUntil("R1");
+                TokenList value = extractUntil(TokenType.SEMICOLON);
                 rpn.clear();
                 exitList.addList(rpn.processArray(value));
-                exitList.addToken(new Token("DECL_INIT", 1));
+                exitList.addToken(new Token(TokenType.DECL, "DECL_INIT"));
             }
-        }
-        else {
-            exitList.addToken(new Token("DECL", 1));
-        }
-        if (current() != null && current().match("R1")) currentNext();
-    }
-
-    private void handleFuncDec(){
-        Token returnType = currentNext();
-        exitList.addToken(returnType);
-        Token funcName = currentNext();
-        exitList.addToken(funcName);
-        currentNext();
-        int paramCount = 0;
-        if (current() != null && !current().match("R5")) {
-            do {
-                if (current() != null && current().match("R2")) {
-                    currentNext();
-                }
-                if (current() != null && current().isType()) {
-                    Token paramType = currentNext();
-                    exitList.addToken(paramType);
-                    Token paramName = currentNext();
-                    exitList.addToken(paramName);
-                    paramCount++;
-                }
-
-            }
-            while (current() != null && current().match("R2"));
-        }
-
-        currentNext();
-
-        exitList.addToken(new Token("FUNC_DECL", paramCount));
-
-        if (current() != null && current().match("R6")) handleBlock();
-    }
-
-    private void handleIf(){
-        System.out.println("DEBUG: handleIf вызван на позиции " + position);
-        currentNext();
-        TokenList condition = extractContent();
-        rpn.clear();
-        TokenList rpnCondition = rpn.processArray(condition);
-        exitList.addList(rpnCondition);
-
-        Token falseLabel = new Token("M", labelStack.size()+1);
-        exitList.addToken(falseLabel);
-        labelStack.push(new JumpLabel(falseLabel,"IF", position));
-
-        if (current().match("R6")) handleBlock();
-        else processStatement();
-
-        // НЕ закрываем метку!
-    }
-
-    private void handleElse(){
-        currentNext();
-
-        Token endIfLabel = new Token("M", labelStack.size() + 1);
-        exitList.addToken(new Token("JMP", 0));
-        exitList.addToken(endIfLabel);
-
-        JumpLabel ifLabel = labelStack.pop();
-        exitList.addToken(new Token("LABEL", ifLabel.token.getCount()));
-
-        labelStack.push(new JumpLabel(endIfLabel, "IF", position)); // ← ИЗМЕНЕНО: IF вместо IF_END
-
-        if (current().match("R6")) {
-            handleBlock();
-        } else if (current().match("W7")) {
-            handleIf();
-            return; // handleIf добавит свою метку в стек
         } else {
-            processStatement();
+            exitList.addToken(new Token(TokenType.DECL, "DECL"));
+        }
 
-            // НОВОЕ: После statement в else закрываем незакрытые IF
-            while (!labelStack.isEmpty() && labelStack.peek().type.equals("IF")) {
-                Token next = current();
-                if (next != null && next.match("W8")) {
-                    break;
-                }
-                JumpLabel label = labelStack.pop();
-                exitList.addToken(new Token("LABEL", label.token.getCount()));
+        if (cur(TokenType.SEMICOLON)) advance();
+    }
+
+    private void handleFuncDec() {
+        Token returnType = advance();
+        exitList.addToken(returnType);
+        Token funcName = advance();
+        exitList.addToken(funcName);
+        advance();
+
+        int paramCount = 0;
+        while (current() != null && !cur(TokenType.RPAREN)) {
+            if (cur(TokenType.COMMA)) advance();
+            if (current() != null && current().isType()) {
+                exitList.addToken(advance());
+                exitList.addToken(advance());
+                paramCount++;
             }
         }
+        advance();
 
-        // Закрываем метку конца else
-        if (!labelStack.isEmpty() && labelStack.peek().type.equals("IF")) {
-            JumpLabel endLabel = labelStack.pop();
-            exitList.addToken(new Token("LABEL", endLabel.token.getCount()));
-        }
+        exitList.addToken(new Token(TokenType.FUNC_BEGIN, paramCount, "FUNC_DECL"));
+
+        if (cur(TokenType.LBRACE)) handleBlock();
     }
 
-    private void handleWhile(){
-        currentNext();
-        Token loopStart = new Token("M", labelStack.size() + 1);
-        exitList.addToken(new Token("LABEL", loopStart.getCount()));
+    private void handleIf() {
+        advance();
 
-        TokenList condition = extractContent();
-        rpn.clear();
-        TokenList rpnCondition = rpn.processArray(condition);
-        exitList.addList(rpnCondition);
-
-        Token loopEnd = new Token("M", labelStack.size() + 2);
-        exitList.addToken(loopEnd);
-        labelStack.push(new JumpLabel(loopEnd, "WHILE", position));
-
-        if (current().match("R6")) handleBlock();
-        else processStatement();
-
-        exitList.addToken(new Token("JMP", 0));
-        exitList.addToken(loopStart);
-
-        JumpLabel endLabel = labelStack.pop();
-        exitList.addToken(new Token("LABEL", endLabel.token.getCount()));
-    }
-
-    private void handleDoWhile() {
-        currentNext();
-        Token loopStart = new Token("M", labelStack.size() + 1);
-        exitList.addToken(new Token("LABEL", loopStart.getCount()));
-        if (current() != null && current().match("R6")) handleBlock();
-        else processStatement();
-        currentNext();
         TokenList condition = extractContent();
         rpn.clear();
         exitList.addList(rpn.processArray(condition));
 
-        exitList.addToken(new Token("JMP_IF_TRUE", 0));
-        exitList.addToken(loopStart);
+        exitList.addToken(new Token(TokenType.JZ, "JZ"));
+        Token falseLabel = newLabel();
+        exitList.addToken(falseLabel);
 
-        if (current() != null && current().match("R1")) currentNext();
+        if (cur(TokenType.LBRACE)) handleBlock();
+        else processStatement();
+
+        if (cur(TokenType.ELSE)) {
+            Token endLabel = newLabel();
+            exitList.addToken(new Token(TokenType.JMP, "JMP"));
+            exitList.addToken(endLabel);
+            exitList.addToken(new Token(TokenType.LABEL, falseLabel.getIndex(), "LABEL"));
+
+            advance();
+            if (cur(TokenType.LBRACE)) handleBlock();
+            else processStatement();
+
+            exitList.addToken(new Token(TokenType.LABEL, endLabel.getIndex(), "LABEL"));
+        } else {
+            exitList.addToken(new Token(TokenType.LABEL, falseLabel.getIndex(), "LABEL"));
+        }
     }
 
-    private void handleFor(){
-        currentNext(); // пропускаем 'for'
-        currentNext(); // пропускаем '('
+    private void handleWhile() {
+        advance();
+        Token loopStart = newLabel();
+        exitList.addToken(new Token(TokenType.LABEL, loopStart.getIndex(), "LABEL"));
 
-        // Обработка инициализации
-        TokenList init = extractUntil("R1");
-        if (!init.isEmpty()) {
-            rpn.clear();
-            exitList.addList(rpn.processArray(init));
-        }
-        currentNext(); // пропускаем ';'
+        TokenList condition = extractContent();
+        rpn.clear();
+        exitList.addList(rpn.processArray(condition));
 
-        // Метка начала цикла
-        Token loopStart = new Token("M", labelStack.size() + 1);
-        exitList.addToken(new Token("LABEL", loopStart.getCount()));
+        exitList.addToken(new Token(TokenType.JZ, "JZ"));
+        Token loopEnd = newLabel();
+        exitList.addToken(loopEnd);
+        labelStack.push(new JumpLabel(loopEnd, "WHILE", position));
 
-        // Обработка условия
-        TokenList condition = extractUntil("R1");
-        if (!condition.isEmpty()) {
-            rpn.clear();
-            exitList.addList(rpn.processArray(condition));
-        }
-        currentNext(); // пропускаем ';'
+        if (cur(TokenType.LBRACE)) handleBlock();
+        else processStatement();
 
-        // Метка выхода из цикла
-        Token loopEnd = new Token("M", labelStack.size() + 2);
+        exitList.addToken(new Token(TokenType.JMP, "JMP"));
+        exitList.addToken(loopStart);
+
+        JumpLabel endLabel = labelStack.pop();
+        exitList.addToken(new Token(TokenType.LABEL, endLabel.token.getIndex(), "LABEL"));
+    }
+
+    private void handleDoWhile() {
+        advance();
+        Token loopStart = newLabel();
+        exitList.addToken(new Token(TokenType.LABEL, loopStart.getIndex(), "LABEL"));
+
+        if (cur(TokenType.LBRACE)) handleBlock();
+        else processStatement();
+
+        advance();
+        TokenList condition = extractContent();
+        rpn.clear();
+        exitList.addList(rpn.processArray(condition));
+
+        exitList.addToken(new Token(TokenType.JNZ, "JMP_IF_TRUE"));
+        exitList.addToken(loopStart);
+
+        if (cur(TokenType.SEMICOLON)) advance();
+    }
+
+    private void handleFor() {
+        advance();
+        advance();
+
+        TokenList init = extractUntil(TokenType.SEMICOLON);
+        if (!init.isEmpty()) { rpn.clear(); exitList.addList(rpn.processArray(init)); }
+        advance();
+
+        Token loopStart = newLabel();
+        exitList.addToken(new Token(TokenType.LABEL, loopStart.getIndex(), "LABEL"));
+
+        TokenList condition = extractUntil(TokenType.SEMICOLON);
+        if (!condition.isEmpty()) { rpn.clear(); exitList.addList(rpn.processArray(condition)); }
+        advance();
+
+        exitList.addToken(new Token(TokenType.JZ, "JZ"));
+        Token loopEnd = newLabel();
         exitList.addToken(loopEnd);
         labelStack.push(new JumpLabel(loopEnd, "FOR", position));
 
-        // Извлекаем инкремент (но не добавляем его сейчас)
-        TokenList increment = extractUntil("R5");
-        currentNext(); // пропускаем ')'
+        TokenList increment = extractUntil(TokenType.RPAREN);
+        advance();
 
-        // Обработка тела цикла
-        if (current().match("R6")) handleBlock();
+        if (cur(TokenType.LBRACE)) handleBlock();
         else processStatement();
 
-        // Теперь добавляем инкремент ПЕРЕД переходом к началу
-        if (!increment.isEmpty()) {
-            rpn.clear();
-            exitList.addList(rpn.processArray(increment));
-        }
+        if (!increment.isEmpty()) { rpn.clear(); exitList.addList(rpn.processArray(increment)); }
 
-        // Переход к началу цикла (к проверке условия)
-        exitList.addToken(new Token("JMP", 0));
+        exitList.addToken(new Token(TokenType.JMP, "JMP"));
         exitList.addToken(loopStart);
 
-        // Метка выхода
         JumpLabel endLabel = labelStack.pop();
-        exitList.addToken(new Token("LABEL", endLabel.token.getCount()));
-    }
-
-    private void handleSwitch(){
-        currentNext();
-        TokenList expr = extractContent();
-        rpn.clear();
-        exitList.addList(rpn.processArray(expr));
-        exitList.addToken(new Token("SWITCH", 0));
-        currentNext();
-        Token switchEnd = new Token("M", labelStack.size() + 1);
-        labelStack.push(new JumpLabel(switchEnd, "SWITCH", position));
-        while (current() != null && !current().match("R7")) {
-            if (current().match("W16")) handleCase();
-            else if (current().match("W17")) handleDefault();
-            else processStatement();
-        }
-        currentNext();
-        JumpLabel endLabel = labelStack.pop();
-        exitList.addToken(new Token("LABEL", endLabel.token.getCount()));
-    }
-
-    private void handleCase() {
-        currentNext();
-        TokenList value = extractUntil("R3");
-        rpn.clear();
-        exitList.addList(rpn.processArray(value));
-        currentNext();
-        exitList.addToken(new Token("CASE", 0));
-    }
-
-    private void handleDefault() {
-        currentNext();
-        currentNext();
-        exitList.addToken(new Token("DEFAULT", 0));
+        exitList.addToken(new Token(TokenType.LABEL, endLabel.token.getIndex(), "LABEL"));
     }
 
     private void handleReturn() {
-        currentNext();
-        if (current() != null && !current().match("R1")) {
-            TokenList returnValue = extractUntil("R1");
+        advance();
+        if (current() != null && !cur(TokenType.SEMICOLON)) {
+            TokenList returnValue = extractUntil(TokenType.SEMICOLON);
             rpn.clear();
             exitList.addList(rpn.processArray(returnValue));
         }
-        exitList.addToken(new Token("RETURN", 0));
-        if (current() != null && current().match("R1")) currentNext();
+        exitList.addToken(new Token(TokenType.RETURN_VAL, "RETURN"));
+        if (cur(TokenType.SEMICOLON)) advance();
     }
 
     private void handleBreak() {
-        currentNext();
-        exitList.addToken(new Token("BREAK", 0));
-        if (current() != null && current().match("R1")) currentNext();
+        advance();
+        exitList.addToken(new Token(TokenType.NOP, "BREAK"));
+        if (cur(TokenType.SEMICOLON)) advance();
     }
 
     private void handleContinue() {
-        currentNext();
-        exitList.addToken(new Token("CONTINUE", 0));
-        if (current() != null && current().match("R1")) currentNext();
+        advance();
+        exitList.addToken(new Token(TokenType.NOP, "CONTINUE"));
+        if (cur(TokenType.SEMICOLON)) advance();
     }
 
     private void handleCin() {
-        currentNext();
+        advance();
         int varCount = 0;
-        while (current() != null && current().match("O24")) {
-            currentNext();
-            Token var = currentNext();
-            exitList.addToken(var);
+        while (cur(TokenType.RSHIFT)) {
+            advance();
+            exitList.addToken(advance());
             varCount++;
         }
-        exitList.addToken(new Token("CIN", varCount));
-        if (current() != null && current().match("R1")) currentNext();
+        exitList.addToken(new Token(TokenType.NOP, varCount, "CIN"));
+        if (cur(TokenType.SEMICOLON)) advance();
     }
 
     private void handleCout() {
-        currentNext();
+        advance();
         int itemCount = 0;
-        while (current() != null && current().match("O23")) {
-            currentNext();
-            if (current() != null) {
-                if (current().getType().equals("S") || current().match("W28")) {
-                    exitList.addToken(currentNext());
+        while (cur(TokenType.LSHIFT)) {
+            advance();
+            if (current() == null) break;
+            if (current().getGroup().equals("S") || is(current(), TokenType.ENDL)) {
+                exitList.addToken(advance());
+                itemCount++;
+            } else {
+                TokenList expr = extractUntil(TokenType.LSHIFT, TokenType.SEMICOLON);
+                if (!expr.isEmpty()) {
+                    rpn.clear();
+                    exitList.addList(rpn.processArray(expr));
                     itemCount++;
-                }
-                else {
-                    TokenList expr = extractUntil("O23", "R1");
-                    if (!expr.isEmpty()) {
-                        rpn.clear();
-                        exitList.addList(rpn.processArray(expr));
-                        itemCount++;
-                    }
                 }
             }
         }
-        exitList.addToken(new Token("COUT", itemCount));
-        if (current() != null && current().match("R1")) {
-            currentNext();
-        }
+        exitList.addToken(new Token(TokenType.NOP, itemCount, "COUT"));
+        if (cur(TokenType.SEMICOLON)) advance();
     }
+
     private void handleBlock() {
-        currentNext(); // пропускаем {
+        advance();
 
         while (hasMoreTokens()) {
             Token token = current();
-            if (token == null || token.match("R7")) {
-                break; // нашли } или конец файла
-            }
+            if (token == null || is(token, TokenType.RBRACE)) break;
 
             processStatement();
 
-            // После каждого statement внутри блока закрываем незакрытые IF
             while (!labelStack.isEmpty() && labelStack.peek().type.equals("IF")) {
-                Token next = current();
-
-                // ИСПРАВЛЕНО: если текущий токен }, смотрим на следующий
-                if (next != null && next.match("R7")) {
-                    Token afterBrace = peek(1);
-                    if (afterBrace != null && afterBrace.match("W8")) {
-                        // После } идёт else, НЕ закрываем метку
-                        break;
-                    }
+                if (cur(TokenType.RBRACE)) {
+                    if (is(peek(1), TokenType.ELSE)) break;
                 }
-
-                // Если текущий токен else, не закрываем
-                if (next != null && next.match("W8")) {
-                    break;
-                }
-
-                // Иначе закрываем IF
+                if (cur(TokenType.ELSE)) break;
                 JumpLabel ifLabel = labelStack.pop();
-                exitList.addToken(new Token("LABEL", ifLabel.token.getCount()));
+                exitList.addToken(new Token(TokenType.LABEL, ifLabel.token.getIndex(), "LABEL"));
             }
         }
 
-        if (current() != null && current().match("R7")) {
-            currentNext(); // пропускаем }
-        }
+        if (cur(TokenType.RBRACE)) advance();
     }
+
     private void handleArrayAccess() {
-        Token arrayVar = currentNext();
-        exitList.addToken(arrayVar);
+        exitList.addToken(advance());
 
-        while (current().match("R8")) { // [
-            currentNext(); // [
-
-            TokenList index = extractUntil("R9"); // до ]
+        while (cur(TokenType.LBRACKET)) {
+            advance();
+            TokenList index = extractUntil(TokenType.RBRACKET);
             rpn.clear();
             exitList.addList(rpn.processArray(index));
-            currentNext();
-            exitList.addToken(new Token("AEoA", 1)); // Операция доступа к элементу
+            advance();
+            exitList.addToken(new Token(TokenType.INDEX, "AEoA"));
         }
     }
 
     private void handleFuncCall() {
-        Token functionName = currentNext();
-        exitList.addToken(functionName);
-
-        currentNext();
+        exitList.addToken(advance());
+        advance();
 
         int argCount = 0;
-        if (!current().match("R5")) {
-            do {
-                if (current().match("R2")) currentNext(); // ,
-                TokenList arg = extractUntil("R2", "R5"); // до , или )
-                if (!arg.isEmpty()) {
-                    rpn.clear();
-                    exitList.addList(rpn.processArray(arg));
-                    argCount++;
-                }
-
+        while (current() != null && !cur(TokenType.RPAREN)) {
+            if (cur(TokenType.COMMA)) advance();
+            TokenList arg = extractUntil(TokenType.COMMA, TokenType.RPAREN);
+            if (!arg.isEmpty()) {
+                rpn.clear();
+                exitList.addList(rpn.processArray(arg));
+                argCount++;
             }
-            while (current().match("R2")); // пока есть запятые
         }
-        currentNext();
-        exitList.addToken(new Token("F", argCount));
+        advance();
+        exitList.addToken(new Token(TokenType.CALL, argCount, "CALL"));
     }
 
     private void handleExpression() {
-        TokenList expression = extractUntil("R1", "R7", "E1"); //  ; } EOF
-
+        TokenList expression = extractUntil(TokenType.SEMICOLON, TokenType.RBRACE);
         if (!expression.isEmpty()) {
             rpn.clear();
             exitList.addList(rpn.processArray(expression));
         }
-
-        if (current() != null && current().match("R1")) currentNext();
+        if (cur(TokenType.SEMICOLON)) advance();
     }
 
     private TokenList extractContent() {
-        currentNext();
-        TokenList content = extractMatchingBrackets("R4", "R5");
-        currentNext();
+        advance();
+        TokenList content = extractMatchingBrackets(TokenType.LPAREN, TokenType.RPAREN);
+        advance();
         return content;
     }
 
-    private TokenList extractMatchingBrackets(String open, String close) {
+    private TokenList extractMatchingBrackets(TokenType open, TokenType close) {
         TokenList content = new TokenList();
         int depth = 1;
         while (hasMoreTokens() && depth > 0) {
             Token token = current();
-            if (token.match(open)) {
-                depth++;
-            } else if (token.match(close)) {
+            if (is(token, open))  depth++;
+            else if (is(token, close)) {
                 depth--;
                 if (depth == 0) break;
             }
-            content.addToken(currentNext());
+            content.addToken(advance());
         }
         return content;
     }
 
-    private TokenList extractUntil(String... stopTokens) {
+    private TokenList extractUntil(TokenType... stopTypes) {
         TokenList content = new TokenList();
 
         while (hasMoreTokens()) {
             Token token = current();
             if (token == null) break;
 
-            for (String stop : stopTokens) {
-                if (token.match(stop)) {
-                    return content;
-                }
+            for (TokenType stop : stopTypes) {
+                if (is(token, stop)) return content;
             }
 
-            if (token.match("R4")) { // (
-                content.addToken(currentNext());
+            if (is(token, TokenType.LPAREN)) {
+                content.addToken(advance());
                 int depth = 1;
                 while (hasMoreTokens() && depth > 0) {
                     Token t = current();
                     if (t == null) break;
-                    if (t.match("R4")) depth++;
-                    else if (t.match("R5")) depth--;
-                    content.addToken(currentNext());
+                    if (is(t, TokenType.LPAREN))  depth++;
+                    else if (is(t, TokenType.RPAREN)) depth--;
+                    content.addToken(advance());
                     if (depth == 0) break;
                 }
                 continue;
             }
 
-            if (token.match("R8")) { // [
-                content.addToken(currentNext());
+            if (is(token, TokenType.LBRACKET)) {
+                content.addToken(advance());
                 int depth = 1;
                 while (hasMoreTokens() && depth > 0) {
                     Token t = current();
                     if (t == null) break;
-
-                    if (t.match("R8")) depth++;
-                    else if (t.match("R9")) depth--;
-
-                    content.addToken(currentNext());
-
+                    if (is(t, TokenType.LBRACKET))  depth++;
+                    else if (is(t, TokenType.RBRACKET)) depth--;
+                    content.addToken(advance());
                     if (depth == 0) break;
                 }
                 continue;
             }
 
-            content.addToken(currentNext());
+            content.addToken(advance());
         }
         return content;
     }
 
+    private boolean hasMoreTokens() { return position < enterList.size(); }
 
+    private Token current() {
+        if (!hasMoreTokens()) return null;
+        return enterList.getToken(position);
+    }
+
+    private Token peek(int offset) {
+        int idx = position + offset;
+        if (idx < 0 || idx >= enterList.size()) return null;
+        return enterList.getToken(idx);
+    }
+
+    private Token advance() {
+        return enterList.getToken(position++);
+    }
 }
