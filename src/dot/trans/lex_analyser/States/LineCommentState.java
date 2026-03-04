@@ -1,8 +1,7 @@
 package dot.trans.lex_analyser.States;
 
 import dot.trans.lex_analyser.ContextBuffer;
-import dot.trans.lex_analyser.TokenList;
-import dot.trans.lex_analyser.lexem.TokenType;
+import dot.trans.lexem.TokenType;
 
 public class LineCommentState implements State{
     @Override

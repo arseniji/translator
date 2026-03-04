@@ -1,7 +1,7 @@
-package dot.trans.lex_analyser;
+package dot.trans.token_util;
 
-import dot.trans.lex_analyser.lexem.Lexems;
-import dot.trans.lex_analyser.lexem.TokenType;
+import dot.trans.lex_analyser.TokenMapper;
+import dot.trans.lexem.TokenType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +27,7 @@ public class TokenList  {
     public boolean isEmpty(){
         return tokenList.isEmpty();
     }
+
 
     public Token getToken(int i){return tokenList.get(i);}
     public void setToken(int i, Token token){tokenList.set(i,token);}

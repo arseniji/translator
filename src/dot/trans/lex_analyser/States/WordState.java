@@ -1,7 +1,6 @@
 package dot.trans.lex_analyser.States;
 
 import dot.trans.lex_analyser.ContextBuffer;
-import dot.trans.lex_analyser.TokenList;
 
 public class WordState implements State{
     @Override

@@ -2,8 +2,12 @@ package dot.trans;
 import dot.trans.lex_analyser.*;
 import dot.trans.rpn.RPN;
 import dot.trans.rpn.SyntaxDefiner;
+import dot.trans.token_util.TokenList;
+//import dot.trans.rpn.RPN;
+//import dot.trans.rpn.SyntaxDefiner;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 
 public class Main {
@@ -14,7 +18,10 @@ public class Main {
             System.out.println(content);
             Tokenizer tokenizer = new Tokenizer(content);
             TokenList tokenList = tokenizer.varTokenize();
+            tokenList = UnaryResolver.resolve(tokenList);
             tokenList.show();
+            System.out.println();
+            System.out.println();
             SyntaxDefiner sd = new SyntaxDefiner(tokenList);
             TokenList tkl = sd.processList();
             System.out.println();

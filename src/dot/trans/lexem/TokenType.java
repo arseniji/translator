@@ -1,4 +1,4 @@
-package dot.trans.lex_analyser.lexem;
+package dot.trans.lexem;
 
 public enum TokenType {
     INT("W1"), FLOAT("W2"), DOUBLE("W3"), CHAR("W4"), BOOL("W5"),
@@ -21,9 +21,18 @@ public enum TokenType {
 
     NUMBER("N"), STRING("S"), VARIABLE("V"), CHAR_LIT("H"),
     COMMENT("C"), MULTICOMMENT("M"), UNARY_MINUS("U2"),
-    ERROR("E");
+    ERROR("E"),
+
+    JMP("P1"), JZ("P2"), JNZ("P3"), LABEL("P4"),
+    DECL("P5"), ALLOC("P6"),
+    CALL("P7"), RETURN_VAL("P8"), FUNC_BEGIN("P9"),
+    FUNC_END("P10"), PARAM("P11"),
+    INDEX("P12"), ADDR("P13"),
+    NOP("P14"), STOP("P15");
 
     private final String code;
     TokenType(String code) { this.code = code; }
     public String getCode() { return code; }
+
+    public String getGroup() {return String.valueOf(code.charAt(0));}
 }

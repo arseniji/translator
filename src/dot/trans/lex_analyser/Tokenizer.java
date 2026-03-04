@@ -2,11 +2,7 @@ package dot.trans.lex_analyser;
 
 import dot.trans.lex_analyser.States.StartState;
 import dot.trans.lex_analyser.States.State;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import dot.trans.token_util.TokenList;
 
 public class Tokenizer {
     private String input;

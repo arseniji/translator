@@ -1,9 +1,8 @@
 package dot.trans.lex_analyser.States;
 
 import dot.trans.lex_analyser.ContextBuffer;
-import dot.trans.lex_analyser.lexem.Lexems;
-import dot.trans.lex_analyser.TokenList;
-import dot.trans.lex_analyser.lexem.TokenType;
+import dot.trans.lexem.Lexems;
+import dot.trans.lexem.TokenType;
 
 public class SlashState implements State{
     @Override

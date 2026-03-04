@@ -1,8 +1,7 @@
 package dot.trans.lex_analyser.States;
 
 import dot.trans.lex_analyser.ContextBuffer;
-import dot.trans.lex_analyser.lexem.Lexems;
-import dot.trans.lex_analyser.TokenList;
+import dot.trans.lexem.Lexems;
 
 public class OperatorState implements State{
     private Character firstChar;

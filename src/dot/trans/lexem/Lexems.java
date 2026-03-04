@@ -1,11 +1,9 @@
-package dot.trans.lex_analyser.lexem;
+package dot.trans.lexem;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Lexems {
-
-    // keyword string → TokenType
     public static final Map<String, TokenType> KEYWORDS = Map.ofEntries(
             Map.entry("int",      TokenType.INT),
             Map.entry("float",    TokenType.FLOAT),

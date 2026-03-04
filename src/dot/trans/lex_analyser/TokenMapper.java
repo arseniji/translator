@@ -1,7 +1,8 @@
 package dot.trans.lex_analyser;
 
-import dot.trans.lex_analyser.lexem.Lexems;
-import dot.trans.lex_analyser.lexem.TokenType;
+import dot.trans.lexem.Lexems;
+import dot.trans.lexem.TokenType;
+import dot.trans.token_util.Token;
 
 public class TokenMapper {
     public static Token add(TokenType type, String value) {
