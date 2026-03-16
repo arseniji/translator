@@ -39,4 +39,7 @@ public class TokenList  {
     public void show(){
         for (Token token:tokenList) System.out.println(token);
     }
+    public void showForOtchet(){
+        for (Token token:tokenList) token.sh();
+    }
 }

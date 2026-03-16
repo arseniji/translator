@@ -1,4 +1,4 @@
-int main() {
+int main(int a, int b) {
     int number;
     bool isPrime = true;
 

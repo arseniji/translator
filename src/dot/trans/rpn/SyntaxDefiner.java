@@ -137,6 +137,16 @@ public class SyntaxDefiner {
         Token varName = advance();
         exitList.addToken(varName);
 
+        if (cur(TokenType.LBRACKET)) {
+            advance();
+            Token size = advance();
+            advance();
+            exitList.addToken(size);
+            exitList.addToken(new Token(TokenType.ALLOC, "ARRAY_DECL"));
+            if (cur(TokenType.SEMICOLON)) advance();
+            return;
+        }
+
         if (cur(TokenType.ASSIGN)) {
             advance();
 
@@ -331,6 +341,17 @@ public class SyntaxDefiner {
             if (current().getGroup().equals("S") || is(current(), TokenType.ENDL)) {
                 exitList.addToken(advance());
                 itemCount++;
+            } else if (current().getGroup().equals("V") && is(peek(1), TokenType.LBRACKET)) {
+                exitList.addToken(advance());
+                while (cur(TokenType.LBRACKET)) {
+                    advance();
+                    TokenList index = extractUntil(TokenType.RBRACKET);
+                    rpn.clear();
+                    exitList.addList(rpn.processArray(index));
+                    advance();
+                    exitList.addToken(new Token(TokenType.INDEX, "AEoA"));
+                }
+                itemCount++;
             } else {
                 TokenList expr = extractUntil(TokenType.LSHIFT, TokenType.SEMICOLON);
                 if (!expr.isEmpty()) {
@@ -376,6 +397,23 @@ public class SyntaxDefiner {
             exitList.addList(rpn.processArray(index));
             advance();
             exitList.addToken(new Token(TokenType.INDEX, "AEoA"));
+        }
+        if (cur(TokenType.ASSIGN)) {
+            Token assign = advance();
+
+            if (isFuncCall()) {
+                handleFuncCall();
+                exitList.addToken(assign);
+            } else {
+                TokenList rhs = extractUntil(TokenType.SEMICOLON);
+                if (!rhs.isEmpty()) {
+                    rpn.clear();
+                    exitList.addList(rpn.processArray(rhs));
+                }
+                exitList.addToken(assign);
+            }
+
+            if (cur(TokenType.SEMICOLON)) advance();
         }
     }
 

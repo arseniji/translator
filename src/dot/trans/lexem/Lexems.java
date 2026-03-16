@@ -2,6 +2,7 @@ package dot.trans.lexem;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Lexems {
     public static final Map<String, TokenType> KEYWORDS = Map.ofEntries(
@@ -78,4 +79,12 @@ public class Lexems {
     public static final Map<String, Integer> CHARS      = new LinkedHashMap<>();
     public static final Map<String, Integer> COMMENTS   = new LinkedHashMap<>();
     public static final Map<String, Integer> MULTICOMMENTS = new LinkedHashMap<>();
+    public static String formatMapWithPrefix(Map<String, Integer> map, String prefix) {
+        if (map == null || map.isEmpty()) {
+            return "{}";
+        }
+        return map.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + prefix + entry.getValue())
+                .collect(Collectors.joining(", ", "{", "}"));
+    }
 }

@@ -57,6 +57,37 @@ public class Token {
         return type.getCode().startsWith("O") || type == TokenType.UNARY_MINUS;
     }
 
+    public String display() {
+        return switch (type) {
+            case JMP  -> "JMP";
+            case JZ   -> "JZ";
+            case JNZ  -> "JNZ";
+
+            case LABEL -> value.equals("LABEL") ? "L" + index + ":" : "L" + index;
+
+            case NUMBER   -> "N" + index;
+            case STRING   -> "S" + index;
+            case VARIABLE -> "V" + index;
+            case CHAR_LIT -> "H" + index;
+
+            case FUNC_BEGIN -> (index > 0 ? index + " " : "") + value;
+            case CALL       -> index + " " + value;
+            case NOP        -> index >= 0 ? index + " " + value : value;
+
+            case DECL, ALLOC, RETURN_VAL,
+                 INDEX, PARAM, ADDR, STOP -> value;
+
+            default -> {
+                if (index >= 0) yield type.getCode() + index;
+                else yield type.getCode();
+            }
+        };
+    }
+
+    public void sh() {
+        System.out.print(display() + " ");
+    }
+
     @Override
     public String toString() {
         String code = index >= 0 ? type.getCode() + "[" + index + "]" : type.getCode();
